@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MP4 → MP3 Converter</title>
+<style>
+  :root{
+    --bg:#0b0b0f;
+    --panel:#141419;
+    --panel-2:#1c1c24;
+    --accent:#7c5cff;
+    --accent-2:#00e5c7;
+    --text:#eaeaf0;
+    --muted:#8b8b9a;
+    --border:#2a2a34;
+    --danger:#ff5c7a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(124,92,255,0.15), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(0,229,199,0.12), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%;
+    max-width:560px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:32px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  h1{
+    margin:0 0 4px;
+    font-size:22px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  p.sub{
+    margin:0 0 24px;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .drop{
+    border:2px dashed var(--border);
+    border-radius:16px;
+    padding:32px 16px;
+    text-align:center;
+    cursor:pointer;
+    transition:.2s;
+    background:var(--panel-2);
+  }
+  .drop:hover, .drop.drag{
+    border-color:var(--accent);
+    background:rgba(124,92,255,0.08);
+  }
+  .drop svg{margin-bottom:10px;opacity:.8;}
+  .drop .title{font-weight:600;font-size:14px;}
+  .drop .hint{color:var(--muted);font-size:12px;margin-top:4px;}
+  input[type=file]{display:none;}
+  .filebox{
+    margin-top:16px;
+    padding:14px 16px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:12px;
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .filebox.show{display:flex;}
+  .filebox .name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px;}
+  .filebox .size{color:var(--muted);font-size:12px;}
+  .row{display:flex;gap:10px;align-items:center;margin-top:18px;}
+  select{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 12px;
+    border-radius:10px;
+    font-size:13px;
+  }
+  button{
+    border:none;
+    border-radius:10px;
+    padding:12px 20px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+  }
+  #convertBtn{
+    width:100%;
+    margin-top:18px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:#0b0b0f;
+  }
+  #convertBtn:disabled{opacity:.4;cursor:not-allowed;}
+  #convertBtn:not(:disabled):hover{filter:brightness(1.1);}
+  .progress-wrap{
+    margin-top:18px;
+    display:none;
+  }
+  .progress-wrap.show{display:block;}
+  .bar-bg{
+    width:100%;
+    height:8px;
+    background:var(--panel-2);
+    border-radius:99px;
+    overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .bar{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .2s;
+  }
+  .status{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+    text-align:center;
+  }
+  .result{
+    margin-top:18px;
+    display:none;
+    flex-direction:column;
+    gap:10px;
+  }
+  .result.show{display:flex;}
+  audio{width:100%;}
+  a.download{
+    text-align:center;
+    text-decoration:none;
+    background:var(--panel-2);
+    border:1px solid var(--accent-2);
+    color:var(--accent-2);
+    padding:12px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+  }
+  a.download:hover{background:rgba(0,229,199,0.1);}
+  .footer{
+    margin-top:20px;
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+  }
+  .error{
+    margin-top:14px;
+    color:var(--danger);
+    font-size:12px;
+    text-align:center;
+    display:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>MP4 → MP3</h1>
+  <p class="sub">Convert langsung di browser lo. Gak upload ke server mana pun — semua diproses lokal pakai ffmpeg.wasm.</p>
+
+  <div class="drop" id="dropZone">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#7c5cff" stroke-width="1.5">
+      <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="title">Drag & drop file MP4, atau klik buat pilih</div>
+    <div class="hint">Support file video umum (mp4, mov, mkv, dll)</div>
+    <input type="file" id="fileInput" accept="video/*">
+  </div>
+
+  <div class="filebox" id="fileBox">
+    <div>
+      <div class="name" id="fileName"></div>
+      <div class="size" id="fileSize"></div>
+    </div>
+    <button id="removeBtn" style="background:var(--panel);color:var(--danger);padding:6px 10px;font-size:12px;">Hapus</button>
+  </div>
+
+  <div class="row">
+    <select id="bitrate">
+      <option value="128k">128 kbps — Standard</option>
+      <option value="192k" selected>192 kbps — Bagus</option>
+      <option value="256k">256 kbps — High</option>
+      <option value="320k">320 kbps — Max Quality</option>
+    </select>
+  </div>
+
+  <button id="convertBtn" disabled>Pilih file dulu</button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="bar-bg"><div class="bar" id="bar"></div></div>
+    <div class="status" id="statusText">Menyiapkan…</div>
+  </div>
+
+  <div class="error" id="errorBox"></div>
+
+  <div class="result" id="result">
+    <audio controls id="audioPreview"></audio>
+    <a class="download" id="downloadLink" download="converted.mp3">⬇ Download MP3</a>
+  </div>
+
+  <div class="footer">Powered by ffmpeg.wasm · file lo gak pernah ninggalin browser</div>
+</div>
+
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+<script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileBox = document.getElementById('fileBox');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
+const removeBtn = document.getElementById('removeBtn');
+const convertBtn = document.getElementById('convertBtn');
+const progressWrap = document.getElementById('progressWrap');
+const bar = document.getElementById('bar');
+const statusText = document.getElementById('statusText');
+const result = document.getElementById('result');
+const audioPreview = document.getElementById('audioPreview');
+const downloadLink = document.getElementById('downloadLink');
+const errorBox = document.getElementById('errorBox');
+const bitrateSelect = document.getElementById('bitrate');
+
+let currentFile = null;
+let ffmpeg = null;
+let ffmpegLoaded = false;
+
+function formatSize(bytes){
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(0)+' KB';
+  return (bytes/(1024*1024)).toFixed(1)+' MB';
+}
+
+function setFile(file){
+  if(!file) return;
+  currentFile = file;
+  fileName.textContent = file.name;
+  fileSize.textContent = formatSize(file.size);
+  fileBox.classList.add('show');
+  convertBtn.disabled = false;
+  convertBtn.textContent = 'Convert ke MP3';
+  result.classList.remove('show');
+  errorBox.style.display = 'none';
+}
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', (e)=>{
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if(e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e)=>{
+  if(e.target.files.length) setFile(e.target.files[0]);
+});
+removeBtn.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  currentFile = null;
+  fileInput.value = '';
+  fileBox.classList.remove('show');
+  convertBtn.disabled = true;
+  convertBtn.textContent = 'Pilih file dulu';
+});
+
+async function loadFFmpeg(){
+  if(ffmpegLoaded) return;
+  const { FFmpeg } = FFmpegWASM;
+  const { toBlobURL } = FFmpegUtil;
+  ffmpeg = new FFmpeg();
+  ffmpeg.on('log', ({ message }) => {
+    statusText.textContent = message.slice(0, 80);
+  });
+  ffmpeg.on('progress', ({ progress }) => {
+    const pct = Math.min(100, Math.round(progress*100));
+    bar.style.width = pct + '%';
+  });
+  statusText.textContent = 'Loading ffmpeg engine (sekali aja, ~30MB)…';
+  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+  });
+  ffmpegLoaded = true;
+}
+
+convertBtn.addEventListener('click', async () => {
+  if(!currentFile) return;
+  convertBtn.disabled = true;
+  errorBox.style.display = 'none';
+  result.classList.remove('show');
+  progressWrap.classList.add('show');
+  bar.style.width = '0%';
+
+  try{
+    const { fetchFile } = FFmpegUtil;
+    await loadFFmpeg();
+
+    statusText.textContent = 'Menulis file ke memory…';
+    const inputName = 'input' + (currentFile.name.match(/\.\w+$/)?.[0] || '.mp4');
+    const outputName = 'output.mp3';
+    await ffmpeg.writeFile(inputName, await fetchFile(currentFile));
+
+    statusText.textContent = 'Converting…';
+    await ffmpeg.exec(['-i', inputName, '-vn', '-b:a', bitrateSelect.value, outputName]);
+
+    statusText.textContent = 'Selesai! Menyiapkan preview…';
+    const data = await ffmpeg.readFile(outputName);
+    const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+
+    audioPreview.src = url;
+    downloadLink.href = url;
+    const baseName = currentFile.name.replace(/\.\w+$/, '');
+    downloadLink.download = baseName + '.mp3';
+
+    result.classList.add('show');
+    bar.style.width = '100%';
+    statusText.textContent = 'Beres, tinggal download 🎧';
+    convertBtn.disabled = false;
+    convertBtn.textContent = 'Convert Lagi';
+
+  }catch(err){
+    console.error(err);
+    errorBox.textContent = 'Gagal convert: ' + (err.message || err);
+    errorBox.style.display = 'block';
+    convertBtn.disabled = false;
+    convertBtn.textContent = 'Coba Lagi';
+  }
+});
+</script>
+
+</body>
+</html>
