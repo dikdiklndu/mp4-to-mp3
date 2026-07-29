@@ -284,7 +284,11 @@ async function loadFFmpeg(){
   if(ffmpegLoaded) return;
   const { FFmpeg } = FFmpegWASM;
   const { toBlobURL } = FFmpegUtil;
+
+  statusText.textContent = 'Loading ffmpeg engine (sekali aja, ~30MB)…';
+
   ffmpeg = new FFmpeg();
+
   ffmpeg.on('log', ({ message }) => {
     statusText.textContent = message.slice(0, 80);
   });
@@ -292,11 +296,16 @@ async function loadFFmpeg(){
     const pct = Math.min(100, Math.round(progress*100));
     bar.style.width = pct + '%';
   });
-  statusText.textContent = 'Loading ffmpeg engine (sekali aja, ~30MB)…';
-  const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+  const ffmpegBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd';
+  const coreBase = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+
+  // classWorkerURL wajib di-blob-in juga, kalau nggak browser nolak bikin
+  // cross-origin Worker (baik dibuka via file:// maupun hosting kayak GitHub Pages).
   await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    coreURL: await toBlobURL(`${coreBase}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${coreBase}/ffmpeg-core.wasm`, 'application/wasm'),
+    classWorkerURL: await toBlobURL(`${ffmpegBase}/814.ffmpeg.js`, 'text/javascript'),
   });
   ffmpegLoaded = true;
 }
